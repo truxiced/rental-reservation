@@ -1,0 +1,18 @@
+{
+  "name": "minut-assignment",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "frontends/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev --workspace=services/reservation-bff",
+    "dev:frontend": "npm run dev --workspace=frontends/web",
+    "lint": "npm run lint --workspace=services/reservation-bff && npm run lint --workspace=frontends/web"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.3"
+  }
+}
