@@ -40,6 +40,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `Unhandled error on ${request.method} ${request.url}`,
         exception.stack,
       );
+    } else {
+      this.logger.error(
+        `Unknown exception on ${request.method} ${request.url}`,
+        JSON.stringify(exception),
+      );
     }
 
     const responseBody: Record<string, unknown> = {

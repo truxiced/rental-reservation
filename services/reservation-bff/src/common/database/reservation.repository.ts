@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { ReservationEntity } from './reservation.entity';
 
 export interface FindPaginatedQuery {
@@ -80,9 +80,12 @@ export class ReservationRepository {
    *
    * This allows same-day checkout/check-in: if guest A has endDate="2024-06-05" and
    * guest B has startDate="2024-06-05", there is no overlap.
+   *
+   * Pass an EntityManager to run inside an existing transaction.
    */
-  findOverlap(params: FindOverlapParams): Promise<ReservationEntity | null> {
-    const qb = this.repo
+  findOverlap(params: FindOverlapParams, manager?: EntityManager): Promise<ReservationEntity | null> {
+    const repo = manager ? manager.getRepository(ReservationEntity) : this.repo;
+    const qb = repo
       .createQueryBuilder('r')
       .where('r.rentalUnitId = :rentalUnitId', { rentalUnitId: params.rentalUnitId })
       .andWhere('r.startDate < :endDate', { endDate: params.endDate })
@@ -95,13 +98,15 @@ export class ReservationRepository {
     return qb.getOne();
   }
 
-  async createAndSave(data: Partial<ReservationEntity>): Promise<ReservationEntity> {
-    const reservation = this.repo.create(data);
-    return this.repo.save(reservation);
+  async createAndSave(data: Partial<ReservationEntity>, manager?: EntityManager): Promise<ReservationEntity> {
+    const repo = manager ? manager.getRepository(ReservationEntity) : this.repo;
+    const reservation = repo.create(data);
+    return repo.save(reservation);
   }
 
-  save(entity: ReservationEntity): Promise<ReservationEntity> {
-    return this.repo.save(entity);
+  save(entity: ReservationEntity, manager?: EntityManager): Promise<ReservationEntity> {
+    const repo = manager ? manager.getRepository(ReservationEntity) : this.repo;
+    return repo.save(entity);
   }
 
   async remove(entity: ReservationEntity): Promise<void> {

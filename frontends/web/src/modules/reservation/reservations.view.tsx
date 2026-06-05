@@ -32,7 +32,7 @@ import {
 } from "../../hooks";
 import { LoadingSpinner, ErrorAlert } from "../../components";
 import { ROUTES } from "../../utils/routes";
-import { formatDate, toDateString } from "../../utils/date";
+import { formatDate, toDateString, today } from "../../utils/date";
 
 export const ReservationsView = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,12 +55,16 @@ export const ReservationsView = () => {
 
   const deleteMutation = useDeleteReservation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this reservation?")) return;
     setDeletingId(id);
+    setDeleteError(null);
     try {
       await deleteMutation.mutateAsync(id);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete reservation.");
     } finally {
       setDeletingId(null);
     }
@@ -168,6 +172,7 @@ export const ReservationsView = () => {
 
       {isLoading && <LoadingSpinner />}
       {error && <ErrorAlert message="Failed to load reservations." />}
+      {deleteError && <ErrorAlert message={deleteError} title="Delete failed" />}
 
       {!isLoading && data?.items.length === 0 && (
         <Box sx={{ textAlign: "center", py: 8 }}>
@@ -203,7 +208,7 @@ export const ReservationsView = () => {
               </TableHead>
               <TableBody>
                 {data.items.map((res) => {
-                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const todayStr = today();
                   const isActive =
                     res.startDate <= todayStr && res.endDate > todayStr;
                   const isPast = res.endDate <= todayStr;

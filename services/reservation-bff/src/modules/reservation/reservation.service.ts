@@ -1,16 +1,23 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { RentalUnitRepository } from '../../common/database/rental-unit.repository';
-import { ReservationEntity } from '../../common/database/reservation.entity';
-import { ReservationRepository } from '../../common/database/reservation.repository';
-import { CreateReservationDto } from './dto/create-reservation.dto';
-import { ListReservationsQueryDto } from './dto/list-reservations-query.dto';
-import { UpdateReservationDto } from './dto/update-reservation.dto';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectDataSource } from "@nestjs/typeorm";
+import { DataSource, EntityManager } from "typeorm";
+import { RentalUnitRepository } from "../../common/database/rental-unit.repository";
+import { ReservationEntity } from "../../common/database/reservation.entity";
+import { ReservationRepository } from "../../common/database/reservation.repository";
+import { CreateReservationDto } from "./dto/create-reservation.dto";
+import { ListReservationsQueryDto } from "./dto/list-reservations-query.dto";
+import { UpdateReservationDto } from "./dto/update-reservation.dto";
 
 @Injectable()
 export class ReservationService {
   constructor(
     private readonly reservationRepository: ReservationRepository,
     private readonly rentalUnitRepository: RentalUnitRepository,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   async findAll(query: ListReservationsQueryDto) {
@@ -37,7 +44,8 @@ export class ReservationService {
   }
 
   async findOne(id: string) {
-    const reservation = await this.reservationRepository.findOneWithRelations(id);
+    const reservation =
+      await this.reservationRepository.findOneWithRelations(id);
     if (!reservation) {
       throw new NotFoundException(`Reservation ${id} not found`);
     }
@@ -50,20 +58,34 @@ export class ReservationService {
       throw new NotFoundException(`Rental unit ${dto.rentalUnitId} not found`);
     }
 
-    await this.assertNoOverlap(dto.rentalUnitId, dto.startDate, dto.endDate);
-
-    const saved = await this.reservationRepository.createAndSave({
-      rentalUnitId: dto.rentalUnitId,
-      guestName: dto.guestName,
-      startDate: dto.startDate,
-      endDate: dto.endDate,
-    });
+    const saved = await this.dataSource.transaction(
+      "SERIALIZABLE",
+      async (manager) => {
+        await this.assertNoOverlap(
+          dto.rentalUnitId,
+          dto.startDate,
+          dto.endDate,
+          undefined,
+          manager,
+        );
+        return this.reservationRepository.createAndSave(
+          {
+            rentalUnitId: dto.rentalUnitId,
+            guestName: dto.guestName,
+            startDate: dto.startDate,
+            endDate: dto.endDate,
+          },
+          manager,
+        );
+      },
+    );
     saved.rentalUnit = unit;
     return this.toResponseShape(saved);
   }
 
   async update(id: string, dto: UpdateReservationDto) {
-    const reservation = await this.reservationRepository.findOneWithRelations(id);
+    const reservation =
+      await this.reservationRepository.findOneWithRelations(id);
     if (!reservation) {
       throw new NotFoundException(`Reservation ${id} not found`);
     }
@@ -72,15 +94,25 @@ export class ReservationService {
     const newEndDate = dto.endDate ?? reservation.endDate;
 
     if (newEndDate <= newStartDate) {
-      throw new ConflictException('endDate must be after startDate');
+      throw new ConflictException("endDate must be after startDate");
     }
 
-    await this.assertNoOverlap(reservation.rentalUnitId, newStartDate, newEndDate, id);
-
-    reservation.guestName = dto.guestName ?? reservation.guestName;
-    reservation.startDate = newStartDate;
-    reservation.endDate = newEndDate;
-    const saved = await this.reservationRepository.save(reservation);
+    const saved = await this.dataSource.transaction(
+      "SERIALIZABLE",
+      async (manager) => {
+        await this.assertNoOverlap(
+          reservation.rentalUnitId,
+          newStartDate,
+          newEndDate,
+          id,
+          manager,
+        );
+        reservation.guestName = dto.guestName ?? reservation.guestName;
+        reservation.startDate = newStartDate;
+        reservation.endDate = newEndDate;
+        return this.reservationRepository.save(reservation, manager);
+      },
+    );
     return this.toResponseShape(saved);
   }
 
@@ -96,22 +128,20 @@ export class ReservationService {
     rentalUnitId: string,
     startDate: string,
     endDate: string,
-    excludeId?: string,
+    excludeId: string | undefined,
+    manager: EntityManager | undefined,
   ): Promise<void> {
-    const conflict = await this.reservationRepository.findOverlap({
-      rentalUnitId,
-      startDate,
-      endDate,
-      excludeId,
-    });
+    const conflict = await this.reservationRepository.findOverlap(
+      { rentalUnitId, startDate, endDate, excludeId },
+      manager,
+    );
     if (conflict) {
       throw new ConflictException({
         statusCode: 409,
-        error: 'Conflict',
-        message: `Unit is already reserved from ${conflict.startDate} to ${conflict.endDate} by ${conflict.guestName}.`,
+        error: "Conflict",
+        message: `Unit is already reserved from ${conflict.startDate} to ${conflict.endDate}.`,
         details: {
           conflictingReservationId: conflict.id,
-          conflictingGuestName: conflict.guestName,
           conflictingStartDate: conflict.startDate,
           conflictingEndDate: conflict.endDate,
         },
@@ -123,7 +153,7 @@ export class ReservationService {
     return {
       id: r.id,
       rentalUnitId: r.rentalUnitId,
-      rentalUnitName: r.rentalUnit?.name ?? '',
+      rentalUnitName: r.rentalUnit?.name ?? "",
       guestName: r.guestName,
       startDate: r.startDate,
       endDate: r.endDate,

@@ -25,6 +25,7 @@ import { ApiRequestError } from "../../api/client";
 import type { Reservation } from "../../api/types";
 import { ROUTES } from "../../utils/routes";
 import { toDateString } from "../../utils/date";
+import { ErrorAlert } from "../../components";
 
 interface ReservationFormProps {
   /**
@@ -54,6 +55,7 @@ export const ReservationForm = ({
   );
 
   const [validationError, setValidationError] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [conflictError, setConflictError] = useState<{
     message: string;
     details?: Record<string, unknown>;
@@ -82,6 +84,7 @@ export const ReservationForm = ({
     }
     setValidationError("");
     setConflictError(null);
+    setSubmitError(null);
 
     try {
       if (isEdit && existing) {
@@ -105,6 +108,10 @@ export const ReservationForm = ({
           message: error.apiError.message,
           details: error.apiError.details,
         });
+      } else {
+        setSubmitError(
+          error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
+        );
       }
     }
   };
@@ -184,6 +191,8 @@ export const ReservationForm = ({
           {validationError && (
             <Alert severity="warning">{validationError}</Alert>
           )}
+
+          {submitError && <ErrorAlert message={submitError} />}
 
           {/* Booking conflict — highlighted prominently */}
           {conflictError && (

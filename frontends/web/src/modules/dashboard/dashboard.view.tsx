@@ -95,6 +95,10 @@ export const DashboardView = () => {
         </Box>
       )}
 
+      {detailQueries.isError && (
+        <ErrorAlert message="Failed to load unit details." />
+      )}
+
       {detailUnits.length > 0 && (
         <Grid container spacing={2}>
           {detailUnits.map((unit) => (
@@ -108,7 +112,8 @@ export const DashboardView = () => {
       {isLoading === false &&
         units &&
         units.length > 0 &&
-        detailUnits.length === 0 && <LoadingSpinner />}
+        detailUnits.length === 0 &&
+        !detailQueries.isError && <LoadingSpinner />}
     </Box>
   );
 };

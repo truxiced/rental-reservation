@@ -20,10 +20,13 @@ const bootstrap = async () => {
 
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  app.enableCors();
+  app.enableCors({ origin: 'http://localhost:5173' });
 
   await app.listen(3000);
   console.log("Reservation BFF running on http://localhost:3000/api");
 };
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to start application', err);
+  process.exit(1);
+});

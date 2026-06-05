@@ -13,15 +13,11 @@ export const formatDate = (dateStr: string): string => {
 };
 
 /**
- * Returns today's date as a YYYY-MM-DD string.
+ * Returns today's date as a YYYY-MM-DD string in local time.
  */
-export const today = (): string => {
-  return new Date().toISOString().slice(0, 10);
-};
+export const today = (): string => format(new Date(), 'yyyy-MM-dd');
 
 /**
- * Converts a Date object to a YYYY-MM-DD string.
+ * Converts a Date object to a YYYY-MM-DD string in local time.
  */
-export const toDateString = (date: Date): string => {
-  return date.toISOString().slice(0, 10);
-};
+export const toDateString = (date: Date): string => format(date, 'yyyy-MM-dd');

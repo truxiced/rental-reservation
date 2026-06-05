@@ -23,7 +23,7 @@ export class RentalUnitService {
       throw new NotFoundException(`Rental unit ${id} not found`);
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD in server local time
 
     const [currentReservation, nextReservation] = await Promise.all([
       this.reservationRepository.findCurrentForUnit(id, today),
