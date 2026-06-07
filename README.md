@@ -39,7 +39,7 @@ The SQLite database is created automatically on first start and migrations run o
 
 | Layer    | Tech                                                                   |
 | -------- | ---------------------------------------------------------------------- |
-| Backend  | NestJS 10, TypeORM, SQLite (better-sqlite3), TypeScript 6              |
+| Backend  | NestJS 11, TypeORM, SQLite (better-sqlite3), TypeScript 6              |
 | Frontend | React 19, Vite, MUI 9, TanStack Query 5, React Router v7, TypeScript 6 |
 | Database | SQLite — file at `services/reservation-bff/data/reservations.sqlite`   |
 
@@ -65,6 +65,7 @@ Base URL: `http://localhost:3000/api`
 | GET    | `/rental-units/:id` | Get unit + current & next reservation |
 | POST   | `/rental-units`     | Create unit                           |
 | PATCH  | `/rental-units/:id` | Update unit                           |
+| DELETE | `/rental-units/:id` | Delete unit (409 if future bookings)  |
 
 ### Reservations
 
