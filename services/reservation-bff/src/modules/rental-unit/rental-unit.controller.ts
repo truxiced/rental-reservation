@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -38,5 +41,11 @@ export class RentalUnitController {
     @Body() dto: UpdateRentalUnitDto,
   ) {
     return this.rentalUnitService.update(id, dto);
+  }
+
+  @Delete(":id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param("id", ParseUUIDPipe) id: string) {
+    return this.rentalUnitService.remove(id);
   }
 }

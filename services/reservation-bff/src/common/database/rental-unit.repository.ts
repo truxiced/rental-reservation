@@ -27,4 +27,8 @@ export class RentalUnitRepository {
   save(entity: RentalUnitEntity): Promise<RentalUnitEntity> {
     return this.repo.save(entity);
   }
+
+  async remove(entity: RentalUnitEntity): Promise<void> {
+    await this.repo.remove(entity);
+  }
 }

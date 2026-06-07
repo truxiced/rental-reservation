@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import {
   ReservationRepository,
   RentalUnitRepository,
@@ -67,5 +71,21 @@ export class RentalUnitService {
     if (dto.name !== undefined) unit.name = dto.name;
     if (dto.address !== undefined) unit.address = dto.address ?? null;
     return this.rentalUnitRepository.save(unit);
+  }
+
+  async remove(id: string): Promise<void> {
+    const unit = await this.rentalUnitRepository.findById(id);
+    if (!unit) {
+      throw new NotFoundException(`Rental unit ${id} not found`);
+    }
+    const today = new Date().toLocaleDateString("sv-SE");
+    const hasActiveOrFuture =
+      await this.reservationRepository.hasActiveOrFutureByUnit(id, today);
+    if (hasActiveOrFuture) {
+      throw new ConflictException(
+        "Cannot delete rental unit with active or future reservations",
+      );
+    }
+    await this.rentalUnitRepository.remove(unit);
   }
 }

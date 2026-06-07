@@ -46,3 +46,14 @@ export const useUpdateRentalUnit = (id: string) => {
     },
   });
 };
+
+export const useDeleteRentalUnit = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => rentalUnitApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: RENTAL_UNIT_KEYS.all });
+      qc.invalidateQueries({ queryKey: ["reservations"] });
+    },
+  });
+};

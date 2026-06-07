@@ -20,4 +20,7 @@ export const rentalUnitApi = {
 
   update: (id: string, input: UpdateRentalUnitInput): Promise<RentalUnit> =>
     apiClient.patch<RentalUnit>(`/rental-units/${id}`, input),
+
+  delete: (id: string): Promise<void> =>
+    apiClient.delete(`/rental-units/${id}`),
 };

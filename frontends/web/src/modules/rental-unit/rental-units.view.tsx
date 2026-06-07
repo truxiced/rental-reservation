@@ -4,6 +4,12 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   InputAdornment,
   Paper,
@@ -19,7 +25,8 @@ import {
   Typography,
 } from "@mui/material";
 import { Search, EventNote, Add } from "@mui/icons-material";
-import { useRentalUnits } from "../../hooks/use-rental-units";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { useRentalUnits, useDeleteRentalUnit } from "../../hooks/use-rental-units";
 import { LoadingSpinner, ErrorAlert } from "../../components";
 import { CreateRentalUnitDialog } from "./create-rental-unit-dialog.component";
 import { ROUTES } from "../../utils/routes";
@@ -27,8 +34,33 @@ import { ROUTES } from "../../utils/routes";
 export const RentalUnitsView = () => {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: units, isLoading, error } = useRentalUnits(search || undefined);
+  const deleteRentalUnit = useDeleteRentalUnit();
+
+  const handleDelete = (id: string, name: string) => {
+    setConfirmDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    const { id } = confirmDelete;
+    setConfirmDelete(null);
+    setDeleteError(null);
+    setDeletingId(id);
+    try {
+      await deleteRentalUnit.mutateAsync(id);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete rental unit.";
+      setDeleteError(message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <Box>
@@ -77,6 +109,7 @@ export const RentalUnitsView = () => {
 
       {isLoading && <LoadingSpinner />}
       {error && <ErrorAlert message="Failed to load rental units." />}
+      {deleteError && <ErrorAlert message={deleteError} />}
 
       {!isLoading && !error && units?.length === 0 && (
         <Box sx={{ textAlign: "center", py: 8 }}>
@@ -139,6 +172,22 @@ export const RentalUnitsView = () => {
                         <EventNote fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Delete unit">
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(unit.id, unit.name)}
+                          disabled={deletingId === unit.id}
+                        >
+                          {deletingId === unit.id ? (
+                            <CircularProgress size={16} color="error" />
+                          ) : (
+                            <DeleteIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -151,6 +200,36 @@ export const RentalUnitsView = () => {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
       />
+
+      <Dialog
+        open={confirmDelete !== null}
+        onClose={() => setConfirmDelete(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete rental unit?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Delete &ldquo;{confirmDelete?.name}&rdquo;? Past reservations will be removed. This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDelete(null)}
+            disabled={deletingId !== null}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleConfirmDelete}
+            disabled={deletingId !== null}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
