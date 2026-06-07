@@ -11,10 +11,10 @@ const bootstrap = async () => {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
+      whitelist: true,              // strip unknown properties from request bodies
+      forbidNonWhitelisted: true,   // throw 400 if unknown properties are sent
+      transform: true,              // auto-transform payloads to DTO class instances
+      transformOptions: { enableImplicitConversion: true }, // coerce query-string primitives (e.g. "1" → 1)
     }),
   );
 

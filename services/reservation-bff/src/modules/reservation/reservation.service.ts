@@ -12,6 +12,12 @@ import { CreateReservationDto } from "./dto/create-reservation.dto";
 import { ListReservationsQueryDto } from "./dto/list-reservations-query.dto";
 import { UpdateReservationDto } from "./dto/update-reservation.dto";
 
+/**
+ * Handles all reservation business logic: CRUD operations and double-booking prevention.
+ *
+ * Create and update operations run inside SERIALIZABLE transactions so that concurrent
+ * requests cannot both pass the overlap check and insert conflicting reservations.
+ */
 @Injectable()
 export class ReservationService {
   constructor(
@@ -58,6 +64,8 @@ export class ReservationService {
       throw new NotFoundException(`Rental unit ${dto.rentalUnitId} not found`);
     }
 
+    // SERIALIZABLE isolation prevents two concurrent requests from both passing
+    // the overlap check and creating conflicting reservations.
     const saved = await this.dataSource.transaction(
       "SERIALIZABLE",
       async (manager) => {
@@ -97,6 +105,7 @@ export class ReservationService {
       throw new ConflictException("endDate must be after startDate");
     }
 
+    // Same SERIALIZABLE isolation as create to prevent race conditions on update.
     const saved = await this.dataSource.transaction(
       "SERIALIZABLE",
       async (manager) => {
@@ -124,6 +133,13 @@ export class ReservationService {
     await this.reservationRepository.remove(reservation);
   }
 
+  /**
+   * Throws a 409 ConflictException if any other reservation on the same unit
+   * overlaps [startDate, endDate).
+   *
+   * @param excludeId - ID of the reservation being updated; excluded from the
+   *   overlap check so a reservation does not conflict with its own current dates.
+   */
   private async assertNoOverlap(
     rentalUnitId: string,
     startDate: string,

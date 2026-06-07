@@ -11,8 +11,8 @@ import { App } from "./app";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      retry: 1,
+      staleTime: 30_000, // cached data stays fresh for 30 s before a background refetch is triggered
+      retry: 1,          // retry failed requests once before surfacing an error to the UI
     },
   },
 });

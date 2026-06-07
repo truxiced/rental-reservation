@@ -47,6 +47,7 @@ export const useUpdateReservation = (id: string) => {
       reservationApi.update(id, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: RESERVATION_KEYS.all });
+      // Also invalidate rental unit details since occupancy status may have changed
       qc.invalidateQueries({ queryKey: ["rental-units"] });
     },
   });
@@ -58,6 +59,7 @@ export const useDeleteReservation = () => {
     mutationFn: (id: string) => reservationApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: RESERVATION_KEYS.all });
+      // Also invalidate rental unit details since occupancy status may have changed
       qc.invalidateQueries({ queryKey: ["rental-units"] });
     },
   });

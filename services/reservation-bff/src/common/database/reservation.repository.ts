@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
-import { ReservationEntity } from './reservation.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { EntityManager, Repository } from "typeorm";
+import { ReservationEntity } from "./reservation.entity";
 
 export interface FindPaginatedQuery {
   rentalUnitId?: string;
@@ -25,48 +25,69 @@ export class ReservationRepository {
     private readonly repo: Repository<ReservationEntity>,
   ) {}
 
-  findCurrentForUnit(rentalUnitId: string, today: string): Promise<ReservationEntity | null> {
+  /**
+   * Returns the active reservation for a unit on a given date, i.e. one where
+   * startDate <= today < endDate (half-open interval).
+   */
+  findCurrentForUnit(
+    rentalUnitId: string,
+    today: string,
+  ): Promise<ReservationEntity | null> {
     return this.repo
-      .createQueryBuilder('r')
-      .where('r.rentalUnitId = :rentalUnitId', { rentalUnitId })
-      .andWhere('r.startDate <= :today', { today })
-      .andWhere('r.endDate > :today', { today })
-      .orderBy('r.startDate', 'ASC')
+      .createQueryBuilder("r")
+      .where("r.rentalUnitId = :rentalUnitId", { rentalUnitId })
+      .andWhere("r.startDate <= :today", { today })
+      .andWhere("r.endDate > :today", { today })
+      .orderBy("r.startDate", "ASC")
       .getOne();
   }
 
-  findNextForUnit(rentalUnitId: string, today: string): Promise<ReservationEntity | null> {
+  /**
+   * Returns the soonest upcoming reservation for a unit, i.e. the one with the
+   * earliest startDate that is strictly after today.
+   */
+  findNextForUnit(
+    rentalUnitId: string,
+    today: string,
+  ): Promise<ReservationEntity | null> {
     return this.repo
-      .createQueryBuilder('r')
-      .where('r.rentalUnitId = :rentalUnitId', { rentalUnitId })
-      .andWhere('r.startDate > :today', { today })
-      .orderBy('r.startDate', 'ASC')
+      .createQueryBuilder("r")
+      .where("r.rentalUnitId = :rentalUnitId", { rentalUnitId })
+      .andWhere("r.startDate > :today", { today })
+      .orderBy("r.startDate", "ASC")
       .getOne();
   }
 
-  findPaginated(query: FindPaginatedQuery): Promise<[ReservationEntity[], number]> {
+  findPaginated(
+    query: FindPaginatedQuery,
+  ): Promise<[ReservationEntity[], number]> {
     const qb = this.repo
-      .createQueryBuilder('r')
-      .leftJoinAndSelect('r.rentalUnit', 'unit')
-      .orderBy('r.startDate', 'ASC')
+      .createQueryBuilder("r")
+      .leftJoinAndSelect("r.rentalUnit", "unit")
+      .orderBy("r.startDate", "ASC")
       .skip((query.page - 1) * query.limit)
       .take(query.limit);
 
     if (query.rentalUnitId) {
-      qb.andWhere('r.rentalUnitId = :rentalUnitId', { rentalUnitId: query.rentalUnitId });
+      qb.andWhere("r.rentalUnitId = :rentalUnitId", {
+        rentalUnitId: query.rentalUnitId,
+      });
     }
     if (query.startDate) {
-      qb.andWhere('r.endDate > :startDate', { startDate: query.startDate });
+      qb.andWhere("r.endDate > :startDate", { startDate: query.startDate });
     }
     if (query.endDate) {
-      qb.andWhere('r.startDate < :endDate', { endDate: query.endDate });
+      qb.andWhere("r.startDate < :endDate", { endDate: query.endDate });
     }
 
     return qb.getManyAndCount();
   }
 
   findOneWithRelations(id: string): Promise<ReservationEntity | null> {
-    return this.repo.findOne({ where: { id }, relations: ['rentalUnit'] });
+    return this.repo.findOne({
+      where: { id },
+      relations: { rentalUnit: true },
+    });
   }
 
   findById(id: string): Promise<ReservationEntity | null> {
@@ -83,28 +104,39 @@ export class ReservationRepository {
    *
    * Pass an EntityManager to run inside an existing transaction.
    */
-  findOverlap(params: FindOverlapParams, manager?: EntityManager): Promise<ReservationEntity | null> {
+  findOverlap(
+    params: FindOverlapParams,
+    manager?: EntityManager,
+  ): Promise<ReservationEntity | null> {
     const repo = manager ? manager.getRepository(ReservationEntity) : this.repo;
     const qb = repo
-      .createQueryBuilder('r')
-      .where('r.rentalUnitId = :rentalUnitId', { rentalUnitId: params.rentalUnitId })
-      .andWhere('r.startDate < :endDate', { endDate: params.endDate })
-      .andWhere('r.endDate > :startDate', { startDate: params.startDate });
+      .createQueryBuilder("r")
+      .where("r.rentalUnitId = :rentalUnitId", {
+        rentalUnitId: params.rentalUnitId,
+      })
+      .andWhere("r.startDate < :endDate", { endDate: params.endDate })
+      .andWhere("r.endDate > :startDate", { startDate: params.startDate });
 
     if (params.excludeId) {
-      qb.andWhere('r.id != :excludeId', { excludeId: params.excludeId });
+      qb.andWhere("r.id != :excludeId", { excludeId: params.excludeId });
     }
 
     return qb.getOne();
   }
 
-  async createAndSave(data: Partial<ReservationEntity>, manager?: EntityManager): Promise<ReservationEntity> {
+  async createAndSave(
+    data: Partial<ReservationEntity>,
+    manager?: EntityManager,
+  ): Promise<ReservationEntity> {
     const repo = manager ? manager.getRepository(ReservationEntity) : this.repo;
     const reservation = repo.create(data);
     return repo.save(reservation);
   }
 
-  save(entity: ReservationEntity, manager?: EntityManager): Promise<ReservationEntity> {
+  save(
+    entity: ReservationEntity,
+    manager?: EntityManager,
+  ): Promise<ReservationEntity> {
     const repo = manager ? manager.getRepository(ReservationEntity) : this.repo;
     return repo.save(entity);
   }

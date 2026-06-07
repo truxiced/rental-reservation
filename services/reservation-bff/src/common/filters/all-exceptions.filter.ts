@@ -8,6 +8,16 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 
+/**
+ * Global exception filter that normalises every thrown error — whether a
+ * NestJS HttpException, a plain Error, or an unknown value — into a consistent
+ * JSON response shape:
+ *
+ *   { statusCode, error, message, details? }
+ *
+ * Non-HTTP errors (unexpected runtime failures) are logged with the full stack
+ * trace and returned as 500 Internal Server Error.
+ */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);

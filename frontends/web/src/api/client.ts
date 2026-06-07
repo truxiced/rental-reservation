@@ -1,3 +1,12 @@
+/**
+ * Thin fetch wrapper used by all API modules.
+ *
+ * - Automatically prefixes every path with `/api` (proxied to the backend in dev).
+ * - Always sends and expects JSON.
+ * - Treats HTTP 204 as a successful empty response.
+ * - Throws a typed `ApiRequestError` for any non-2xx response so callers and
+ *   TanStack Query mutation handlers can inspect `statusCode` and `details`.
+ */
 import type { ApiError } from "./types";
 
 export class ApiRequestError extends Error {
