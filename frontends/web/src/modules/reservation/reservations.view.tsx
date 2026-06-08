@@ -29,6 +29,7 @@ import {
   useReservations,
   useDeleteReservation,
   useRentalUnits,
+  useMutationWithErrorState,
 } from "../../hooks";
 import { LoadingSpinner, ErrorAlert } from "../../components";
 import { ROUTES } from "../../utils/routes";
@@ -54,20 +55,12 @@ export const ReservationsView = () => {
   });
 
   const deleteMutation = useDeleteReservation();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { execute: executeDelete, error: deleteError, isExecuting: isDeletingReservation } =
+    useMutationWithErrorState(deleteMutation);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this reservation?")) return;
-    setDeletingId(id);
-    setDeleteError(null);
-    try {
-      await deleteMutation.mutateAsync(id);
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : "Failed to delete reservation.");
-    } finally {
-      setDeletingId(null);
-    }
+    await executeDelete(id);
   };
 
   const handleRentalUnitChange = (id: string) => {
@@ -254,7 +247,7 @@ export const ReservationsView = () => {
                           <IconButton
                             size="small"
                             color="error"
-                            disabled={deletingId === res.id}
+                            disabled={isDeletingReservation(res.id)}
                             onClick={() => handleDelete(res.id)}
                           >
                             <DeleteIcon fontSize="small" />

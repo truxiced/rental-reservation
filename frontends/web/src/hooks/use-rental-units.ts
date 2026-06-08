@@ -4,6 +4,7 @@ import type {
   CreateRentalUnitInput,
   UpdateRentalUnitInput,
 } from "../api/types";
+import { RESERVATION_KEYS } from "./use-reservations";
 
 export const RENTAL_UNIT_KEYS = {
   all: ["rental-units"] as const,
@@ -53,7 +54,7 @@ export const useDeleteRentalUnit = () => {
     mutationFn: (id: string) => rentalUnitApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: RENTAL_UNIT_KEYS.all });
-      qc.invalidateQueries({ queryKey: ["reservations"] });
+      qc.invalidateQueries({ queryKey: RESERVATION_KEYS.all });
     },
   });
 };

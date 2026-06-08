@@ -58,6 +58,18 @@ export class ReservationRepository {
       .getOne();
   }
 
+  async hasActiveOrFutureByUnit(
+    rentalUnitId: string,
+    today: string,
+  ): Promise<boolean> {
+    const count = await this.repo
+      .createQueryBuilder("r")
+      .where("r.rentalUnitId = :rentalUnitId", { rentalUnitId })
+      .andWhere("r.endDate > :today", { today })
+      .getCount();
+    return count > 0;
+  }
+
   findPaginated(
     query: FindPaginatedQuery,
   ): Promise<[ReservationEntity[], number]> {
@@ -143,21 +155,5 @@ export class ReservationRepository {
 
   async remove(entity: ReservationEntity): Promise<void> {
     await this.repo.remove(entity);
-  }
-
-  /**
-   * Returns true if the unit has any reservation that ends on or after today,
-   * meaning it has active or future bookings that would block deletion.
-   */
-  async hasActiveOrFutureByUnit(
-    rentalUnitId: string,
-    today: string,
-  ): Promise<boolean> {
-    const count = await this.repo
-      .createQueryBuilder("r")
-      .where("r.rentalUnitId = :rentalUnitId", { rentalUnitId })
-      .andWhere("r.endDate >= :today", { today })
-      .getCount();
-    return count > 0;
   }
 }

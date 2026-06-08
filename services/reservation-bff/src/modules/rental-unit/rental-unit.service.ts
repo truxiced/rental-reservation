@@ -7,6 +7,7 @@ import {
   ReservationRepository,
   RentalUnitRepository,
 } from "../../common/database";
+import { today } from "../../common/utils/date";
 import { CreateRentalUnitDto, UpdateRentalUnitDto } from "./dto";
 
 @Injectable()
@@ -27,11 +28,9 @@ export class RentalUnitService {
       throw new NotFoundException(`Rental unit ${id} not found`);
     }
 
-    const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD in server local time
-
     const [currentReservation, nextReservation] = await Promise.all([
-      this.reservationRepository.findCurrentForUnit(id, today),
-      this.reservationRepository.findNextForUnit(id, today),
+      this.reservationRepository.findCurrentForUnit(id, today()),
+      this.reservationRepository.findNextForUnit(id, today()),
     ]);
 
     return {
@@ -78,10 +77,9 @@ export class RentalUnitService {
     if (!unit) {
       throw new NotFoundException(`Rental unit ${id} not found`);
     }
-    const today = new Date().toLocaleDateString("sv-SE");
-    const hasActiveOrFuture =
-      await this.reservationRepository.hasActiveOrFutureByUnit(id, today);
-    if (hasActiveOrFuture) {
+    const hasReservations =
+      await this.reservationRepository.hasActiveOrFutureByUnit(id, today());
+    if (hasReservations) {
       throw new ConflictException(
         "Cannot delete rental unit with active or future reservations",
       );

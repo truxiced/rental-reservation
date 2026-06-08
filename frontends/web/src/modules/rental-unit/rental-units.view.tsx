@@ -26,7 +26,7 @@ import {
 } from "@mui/material";
 import { Search, EventNote, Add } from "@mui/icons-material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useRentalUnits, useDeleteRentalUnit } from "../../hooks/use-rental-units";
+import { useRentalUnits, useDeleteRentalUnit, useMutationWithErrorState } from "../../hooks";
 import { LoadingSpinner, ErrorAlert } from "../../components";
 import { CreateRentalUnitDialog } from "./create-rental-unit-dialog.component";
 import { ROUTES } from "../../utils/routes";
@@ -35,11 +35,11 @@ export const RentalUnitsView = () => {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: units, isLoading, error } = useRentalUnits(search || undefined);
   const deleteRentalUnit = useDeleteRentalUnit();
+  const { execute: executeDelete, error: deleteError, isExecuting: isDeletingUnit } =
+    useMutationWithErrorState(deleteRentalUnit);
 
   const handleDelete = (id: string, name: string) => {
     setConfirmDelete({ id, name });
@@ -49,17 +49,7 @@ export const RentalUnitsView = () => {
     if (!confirmDelete) return;
     const { id } = confirmDelete;
     setConfirmDelete(null);
-    setDeleteError(null);
-    setDeletingId(id);
-    try {
-      await deleteRentalUnit.mutateAsync(id);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to delete rental unit.";
-      setDeleteError(message);
-    } finally {
-      setDeletingId(null);
-    }
+    await executeDelete(id);
   };
 
   return (
@@ -178,9 +168,9 @@ export const RentalUnitsView = () => {
                           size="small"
                           color="error"
                           onClick={() => handleDelete(unit.id, unit.name)}
-                          disabled={deletingId === unit.id}
+                          disabled={isDeletingUnit(unit.id)}
                         >
-                          {deletingId === unit.id ? (
+                          {isDeletingUnit(unit.id) ? (
                             <CircularProgress size={16} color="error" />
                           ) : (
                             <DeleteIcon fontSize="small" />
@@ -216,7 +206,7 @@ export const RentalUnitsView = () => {
         <DialogActions>
           <Button
             onClick={() => setConfirmDelete(null)}
-            disabled={deletingId !== null}
+            disabled={deleteRentalUnit.isPending}
           >
             Cancel
           </Button>
@@ -224,7 +214,7 @@ export const RentalUnitsView = () => {
             color="error"
             variant="contained"
             onClick={handleConfirmDelete}
-            disabled={deletingId !== null}
+            disabled={deleteRentalUnit.isPending}
           >
             Delete
           </Button>
